@@ -463,7 +463,7 @@ class SQLSTMT is SQL_HANDLE is export is repr('CPointer') {
             if $etl >= 0 {
                 $etl = $data-size - $write-buf-size + $etl;
                 $data .= subbuf(^$etl);
-                ($raw ?? $data !! $data.decode);
+                ($raw ?? $data !! $data.decode: 'utf8-c8');
             } else { $raw ?? Buf !! Str }
         }
     }
