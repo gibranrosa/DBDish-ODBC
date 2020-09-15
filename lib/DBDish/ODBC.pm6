@@ -1,7 +1,7 @@
 use v6;
 need DBDish;
 
-unit class DBDish::ODBC:auth<salortiz>:ver<0.0.7> does DBDish::Driver;
+unit class DBDish::ODBC:auth<salortiz>:ver<0.0.9> does DBDish::Driver;
 use DBDish::ODBC::Native;
 need DBDish::ODBC::Connection;
 
@@ -47,9 +47,9 @@ multi method connect(
 }
 
 # Generic one
-multi method connect(:$RaiseError = $!RaiseError, *%args) {
+multi method connect(:$RaiseError = $!RaiseError, :$conn-encoding, *%args) {
     my $conn-str = %args.pairs.map( {"{.key}={.value}" }).join(';');
-    self.connect(:$conn-str, :$RaiseError);
+    self.connect(:$conn-str, :$RaiseError, :$conn-encoding);
 }
 
 method version() {

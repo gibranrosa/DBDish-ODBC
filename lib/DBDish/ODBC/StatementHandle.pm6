@@ -10,7 +10,7 @@ has SQLSTMT $!sth is required;
 has Str $!statement;
 has @!param-type;
 has $!field_count;
-
+has Str $!conn-encoding;
 method !handle-error($rep) {
     $rep ~~ ODBCErr ?? self!set-err(|$rep.list) !! $rep
 }
@@ -27,7 +27,7 @@ method !get-meta {
 }
 
 submethod BUILD(:$!conn!, :$!parent!,
-    :$!sth!, :$!statement = '', :$!RaiseError
+    :$!sth!, :$!statement = '', :$!RaiseError, Str :$!conn-encoding = 'utf8'
 ) {
     unless $!statement { # Prepared
 	with self!handle-error($!sth.NumParams) -> $params {
@@ -49,7 +49,7 @@ method execute(*@params) {
     my Buf[int64] $SoI .= allocate(+@params);
     for @params.kv -> $k, $v {
 	if $v.defined {
-	    my $param = ($v ~~ Blob) ?? $v !! (~$v).encode;
+	    my $param = ($v ~~ Blob) ?? $v !! (~$v).encode: $!conn-encoding;
 	    @bufs.push($param);
 	    $SoI[$k] = $param.bytes;
 	    self!handle-error($!sth.BindParameter($k+1, @!param-type[$k], $param, $SoI));
@@ -73,17 +73,17 @@ method execute(*@params) {
 method _row(:$hash) {
     my $list = ();
     if $!field_count -> $cols {
-	given $!sth.Fetch {
-	    when SQL_SUCCESS {
-		$list = do for ^$cols {
-		    my $type = @!column-type[$_]; my $raw = $type ~~ Buf;
-		    my $value = do with $!sth.GetData($_ + 1, :$raw) {
-			$raw ?? $_ !! .$type
-		    } else { $type }
+		given $!sth.Fetch {
+			when SQL_SUCCESS {
+				$list = do for ^$cols {
+					my $type = @!column-type[$_]; my $raw = $type ~~ Buf;
+					my $value = do with $!sth.GetData($_ + 1, $!conn-encoding, :$raw) {
+						$raw ?? $_ !! .$type
+					} else { $type }
+				}
+			}
+			when SQL_NO_DATA { self.finish }
 		}
-	    }
-	    when SQL_NO_DATA { self.finish }
-	}
     }
     $list;
 }

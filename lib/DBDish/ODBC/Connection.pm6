@@ -7,8 +7,13 @@ use DBDish::ODBC::Native;
 
 has SQLDBC $!conn;
 has Str $.fconn-str;
+has Str $!conn-encoding;
 
-submethod BUILD(:$!conn!, :$!fconn-str!, :$!parent!, :$!RaiseError) { };
+submethod BUILD(:$!conn!, :$!fconn-str!, :$!parent!, :$!RaiseError, :$conn-encoding = 'utf8') {
+	with $conn-encoding {
+		$!conn-encoding := $conn-encoding;
+	}
+ };
 
 method !handle-error($rep) {
     $rep ~~ ODBCErr ?? self!set-err(|$rep.list) !! $rep
@@ -27,7 +32,7 @@ method prepare(Str $statement, *%args) {
 method execute(Str $statement, :$rows) {
     my $sth = SQLSTMT.Alloc($!conn);
     my $st = DBDish::ODBC::StatementHandle.new(
-	:$sth, :$!conn, :parent(self), :$.RaiseError, :$statement
+	:$sth, :$!conn, :parent(self), :$.RaiseError, :$statement, :$!conn-encoding
     );
     with $st.execute {
 	if $rows {
